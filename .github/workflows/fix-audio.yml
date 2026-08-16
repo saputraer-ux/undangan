@@ -1,0 +1,33 @@
+name: Fix invitation audio playback
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-audio.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch open button audio order
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = "$('#open').onclick=async()=>{if(!configReady){await Promise.race([loadConfig(),new Promise(r=>setTimeout(r,900))])}startMusic();$('#cover').classList.add('out');document.body.classList.remove('lock')};"
+          new = "$('#open').onclick=()=>{startMusic();$('#cover').classList.add('out');document.body.classList.remove('lock');if(!configReady)loadConfig()};"
+          if old not in s:
+              raise SystemExit('Target handler not found; no change made.')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Fix audio playback on invitation open"
+          git push
